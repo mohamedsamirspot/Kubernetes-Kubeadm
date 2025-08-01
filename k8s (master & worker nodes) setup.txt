@@ -1,0 +1,84 @@
+https://www.cherryservers.com/blog/install-kubernetes-ubuntu
+
+------------------------ setting hosts (all nodes)
+sudo  vim  /etc/hosts
+        172.31.81.11 k8s-master-node
+        172.31.82.210 k8s-worker-node
+
+------------------------ setting hostname (all nodes)
+#For Kubernetes master node
+sudo hostnamectl set-hostname "k8s-master-node" 
+
+#For worker node
+sudo hostnamectl set-hostname "k8s-worker-node"   
+
+# To effect the hostname changes, run:
+sudo exec bash
+
+-------------------------Load Containerd modules (all nodes)
+sudo modprobe overlay
+sudo modprobe br_netfilter
+
+-------------------------Create a configuration file as shown and specify the modules to load them permanently.
+sudo tee /etc/modules-load.d/k8s.conf <<EOF
+overlay
+br_netfilter
+EOF
+------------------------Configure Kubernetes IPv4 networking (all nodes)
+sudo vim   /etc/sysctl.d/k8s.conf
+        net.bridge.bridge-nf-call-iptables  = 1
+        net.bridge.bridge-nf-call-ip6tables = 1
+        net.ipv4.ip_forward   = 1
+
+sudo sysctl --system
+
+----------------------- Install containerd (on all nodes)
+sudo apt update
+sudo apt install docker.io -y
+sudo systemctl status docker
+sudo systemctl enable docker
+sudo mkdir /etc/containerd
+# Next, create a default configuration file for containerd.
+sudo sh -c "containerd config default > /etc/containerd/config.toml"
+# Update the SystemdCgroup directive by setting it to true as shown.
+sudo sed -i 's/ SystemdCgroup = false/ SystemdCgroup = true/' /etc/containerd/config.toml
+sudo systemctl restart containerd.service
+sudo systemctl status containerd.service
+
+------------------------Install Kubernetes components (on all nodes)
+sudo apt-get install curl ca-certificates apt-transport-https  -y
+# Add the Kubernetes GPG signing key.
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+# Thereafter, add the official Kubernetes repository to your system.
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo apt update
+
+sudo apt install kubelet kubeadm kubectl -y
+
+-------------------------  Initialize Kubernetes cluster (on master node)
+sudo kubeadm init \
+  --apiserver-advertise-address=172.31.81.11 \
+  --apiserver-cert-extra-sans=172.31.81.11,44.201.104.153 \
+  --pod-network-cidr=10.10.0.0/16
+
+
+
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+
+
+-------------------------- Install Calico network add-on plugin (from master node)
+kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/tigera-operator.yaml
+# Next, download Calico’s custom-resources file using the curl command.
+curl https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/custom-resources.yaml -O
+# Update the CIDR defined in the custom-resources file to match the pod's network.
+sed -i 's/cidr: 192\.168\.0\.0\/16/cidr: 10.10.0.0\/16/g' custom-resources.yaml
+kubectl create -f custom-resources.yaml
+
+
+
+
+------------------------ Add worker nodes to the cluster (on worker nodes)
+sudo kubeadm join 172.31.81.11:6443 --token pc4byj.ll8pmh3jtpnuxslo --discovery-token-ca-cert-hash sha256:163099aee86649e12a854844a26dc051e9bbcb15da9acaba3dda9e0bcbf9ee5b
