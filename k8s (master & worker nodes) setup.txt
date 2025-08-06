@@ -1,3 +1,6 @@
+https://www.cherryservers.com/blog/install-kubernetes-ubuntu
+
+
 ------------------------ setting hosts (all nodes)
 sudo  vim  /etc/hosts
         172.31.81.11 k8s-master-node
