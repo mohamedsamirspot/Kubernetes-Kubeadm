@@ -1,0 +1,6 @@
+-----------------------All using helm charts--------------------
+- Installing Prometheus and metrics-server for pods and nodes metrics
+- Installing Loki for logs
+- Installing grafana-alloy to collect logs from pods and nodes and sending them to loki
+- Installing blackbox exporter to monitor the endpoint
+- Installing Grafana to visualize the metrics, logs and setting alerts if required
