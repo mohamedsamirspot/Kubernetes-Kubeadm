@@ -1,3 +1,4 @@
+Installing a Kubernetes cluster using kubeadm on 4 AWS EC2 instances (1 control plane, 2 worker nodes, and 1 to work as an Nginx LB instead of the AWS ALB or NLB) with the Nginx Ingress controller and deploying the Juice app.
 # Notes
 ## Step 1: Kubernetes Cluster Using Kubeadm
 - Initialize the infra in aws using terraform to create one master node and one worker node and one server to act as load balancer
